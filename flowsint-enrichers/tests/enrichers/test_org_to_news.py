@@ -293,3 +293,25 @@ def test_postprocess_keeps_each_article_with_its_own_organization():
         ("Acme Corp", "https://news.example.com/acme"),
         ("Globex", "https://news.example.com/globex"),
     ]
+
+
+def test_postprocess_creates_each_organization_node_once():
+    graph = _FakeGraphService()
+    enricher = OrgToNewsEnricher(sketch_id="s", scan_id="t", graph_service=graph)
+    articles = [
+        _article("https://news.example.com/acme-1", "Acme Corp"),
+        _article("https://news.example.com/acme-2", "Acme Corp"),
+        _article("https://news.example.com/globex", "Globex"),
+    ]
+
+    enricher.postprocess(articles)
+
+    acme = Organization(name="Acme Corp")
+    globex = Organization(name="Globex")
+    # One node per distinct name, still one node per article.
+    assert graph.nodes == [acme, articles[0], articles[1], globex, articles[2]]
+    assert [(rel[0], rel[1]) for rel in graph.relationships] == [
+        (acme, articles[0]),
+        (acme, articles[1]),
+        (globex, articles[2]),
+    ]

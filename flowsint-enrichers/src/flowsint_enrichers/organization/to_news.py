@@ -281,13 +281,19 @@ class OrgToNewsEnricher(Enricher):
         if not self._graph_service:
             return results
 
+        # Every row for a name carries the same Organization, so create it once
+        # per name instead of once per article.
+        created_orgs: set[str] = set()
+
         for article in results:
             source_org_name = getattr(article, "_source_org_name", None)
             if not source_org_name:
                 continue
 
             org = Organization(name=source_org_name)
-            self.create_node(org)
+            if source_org_name not in created_orgs:
+                self.create_node(org)
+                created_orgs.add(source_org_name)
             self.create_node(article)
 
             # An article covering an organization mentions it; it is not a site

@@ -253,3 +253,27 @@ def test_postprocess_keeps_each_mention_with_its_own_individual():
         ("Jane Doe", "https://example.com/jane"),
         ("John Roe", "https://example.com/john"),
     ]
+
+
+def test_postprocess_creates_each_individual_node_once():
+    graph = _FakeGraphService()
+    enricher = IndividualToMentionsEnricher(
+        sketch_id="s", scan_id="t", graph_service=graph
+    )
+    pages = [
+        _mention("https://example.com/jane-1", "Jane Doe"),
+        _mention("https://example.com/jane-2", "Jane Doe"),
+        _mention("https://example.com/john", "John Roe"),
+    ]
+
+    enricher.postprocess(pages)
+
+    jane = Individual(full_name="Jane Doe")
+    john = Individual(full_name="John Roe")
+    # One node per distinct name, still one node per mention.
+    assert graph.nodes == [jane, pages[0], pages[1], john, pages[2]]
+    assert [(rel[0], rel[1]) for rel in graph.relationships] == [
+        (jane, pages[0]),
+        (jane, pages[1]),
+        (john, pages[2]),
+    ]

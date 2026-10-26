@@ -237,13 +237,19 @@ class IndividualToMentionsEnricher(Enricher):
         if not self._graph_service:
             return results
 
+        # Every row for a name carries the same Individual, so create it once
+        # per name instead of once per mention.
+        created_individuals: set[str] = set()
+
         for mention in results:
             source_full_name = getattr(mention, "_source_full_name", None)
             if not source_full_name:
                 continue
 
             individual = Individual(full_name=source_full_name)
-            self.create_node(individual)
+            if source_full_name not in created_individuals:
+                self.create_node(individual)
+                created_individuals.add(source_full_name)
             self.create_node(mention)
 
             # A name on a page is evidence of a mention, not of ownership, so
